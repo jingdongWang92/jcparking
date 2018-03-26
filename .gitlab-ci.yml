@@ -1,0 +1,48 @@
+variables:
+  DOCKER_REGISTRY: "registry.cn-hangzhou.aliyuncs.com"
+  DOCKER_REGISTRY_NAMESPACE: "jc-network-web"
+
+
+cache:
+  untracked: true
+  
+
+stages:
+  - build
+  - deploy
+
+
+build-develop:
+  stage: build
+  image: docker:latest
+  variables:
+    IMAGE_NAME: zheng-yao-ting-che
+  script:
+    - docker build --pull -t ${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/${CI_PROJECT_NAMESPACE}-${CI_PROJECT_NAME}-${IMAGE_NAME}:next .
+    - docker login -u ${ALIYUN_DOCKER_REGISTRY_USERNAME} -p ${ALIYUN_DOCKER_REGISTRY_PASSWORD} ${DOCKER_REGISTRY}
+    - docker push ${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/${CI_PROJECT_NAMESPACE}-${CI_PROJECT_NAME}-${IMAGE_NAME}:next
+  only:
+    - develop
+
+
+build-master:
+  stage: build
+  image: docker:latest
+  variables:
+    IMAGE_NAME: zheng-yao-ting-che
+  script:
+    - docker build --pull -t ${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/${CI_PROJECT_NAMESPACE}-${CI_PROJECT_NAME}-${IMAGE_NAME}:latest .
+    - docker login -u ${ALIYUN_DOCKER_REGISTRY_USERNAME} -p ${ALIYUN_DOCKER_REGISTRY_PASSWORD} ${DOCKER_REGISTRY}
+    - docker push ${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/${CI_PROJECT_NAMESPACE}-${CI_PROJECT_NAME}-${IMAGE_NAME}:latest
+  only:
+    - master
+
+
+deploy:
+  stage: deploy
+  image: docker:latest
+  script:
+    - docker run --rm ${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/devops-ansible-ansible:latest ansible-playbook sites/com.jcbel.staging.apis.zheng-yao-ting-che/site.yml
+  only:
+    - master
+  when: manual
